@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:url_launcher/url_launcher.dart';
 import '../models/email.dart';
 import '../providers/auth_provider.dart';
 import '../providers/email_provider.dart';
@@ -44,8 +45,23 @@ class EmailDetailScreen extends StatelessWidget {
             content: Text('Saved to $filePath'),
             action: SnackBarAction(
               label: 'Open Folder',
-              onPressed: () {
-                // Potential to use url_launcher to open the directory
+              onPressed: () async {
+                final Uri uri = Uri.directory(dir!.path);
+                try {
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri);
+                  } else {
+                    if (Platform.isLinux) {
+                      await Process.run('xdg-open', [dir.path]);
+                    } else if (Platform.isWindows) {
+                      await Process.run('explorer.exe', [dir.path]);
+                    } else if (Platform.isMacOS) {
+                      await Process.run('open', [dir.path]);
+                    }
+                  }
+                } catch (e) {
+                  debugPrint('Error opening folder: $e');
+                }
               },
             ),
           ),
