@@ -7,7 +7,16 @@ import '../providers/auth_provider.dart';
 import '../services/resend_service.dart';
 
 class ComposeScreen extends StatefulWidget {
-  const ComposeScreen({super.key});
+  final List<String> initialTo;
+  final String initialSubject;
+  final String initialBody;
+
+  const ComposeScreen({
+    super.key,
+    this.initialTo = const [],
+    this.initialSubject = '',
+    this.initialBody = '',
+  });
 
   @override
   State<ComposeScreen> createState() => _ComposeScreenState();
@@ -21,6 +30,14 @@ class _ComposeScreenState extends State<ComposeScreen> {
   bool _isSending = false;
 
   @override
+  void initState() {
+    super.initState();
+    _toController.text = widget.initialTo.join(', ');
+    _subjectController.text = widget.initialSubject;
+    _bodyController.text = widget.initialBody;
+  }
+
+  @override
   void dispose() {
     _toController.dispose();
     _subjectController.dispose();
@@ -32,7 +49,9 @@ class _ComposeScreenState extends State<ComposeScreen> {
     final result = await FilePicker.platform.pickFiles(allowMultiple: true);
     if (result != null) {
       setState(() {
-        _attachments.addAll(result.paths.where((p) => p != null).map((p) => File(p!)));
+        _attachments.addAll(
+          result.paths.where((p) => p != null).map((p) => File(p!)),
+        );
       });
     }
   }
@@ -58,11 +77,14 @@ class _ComposeScreenState extends State<ComposeScreen> {
     try {
       final auth = context.read<AuthProvider>();
       final service = ResendService(auth.apiKey!);
-      
-      final toList = _toController.text.split(',').map((e) => e.trim()).toList();
-      
+
+      final toList = _toController.text
+          .split(',')
+          .map((e) => e.trim())
+          .toList();
+
       await service.sendEmail(
-        from: auth.defaultFrom!,
+        from: auth.formattedFrom ?? auth.defaultFrom!,
         to: toList,
         subject: _subjectController.text,
         text: _bodyController.text,
@@ -77,9 +99,9 @@ class _ComposeScreenState extends State<ComposeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       }
     } finally {
       if (mounted) {
@@ -101,13 +123,14 @@ class _ComposeScreenState extends State<ComposeScreen> {
           if (_isSending)
             const Padding(
               padding: EdgeInsets.all(16.0),
-              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
             )
           else
-            IconButton(
-              icon: const Icon(Icons.send),
-              onPressed: _send,
-            ),
+            IconButton(icon: const Icon(Icons.send), onPressed: _send),
         ],
       ),
       body: SingleChildScrollView(
@@ -115,7 +138,10 @@ class _ComposeScreenState extends State<ComposeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('From: ${auth.defaultFrom}', style: Theme.of(context).textTheme.bodyLarge),
+            Text(
+              'From: ${auth.formattedFrom ?? auth.defaultFrom}',
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
             const Divider(height: 24),
             TextField(
               controller: _toController,
@@ -144,7 +170,10 @@ class _ComposeScreenState extends State<ComposeScreen> {
             ),
             const SizedBox(height: 16),
             if (_attachments.isNotEmpty) ...[
-              const Text('Attachments:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Attachments:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
               ..._attachments.asMap().entries.map((entry) {
                 return ListTile(

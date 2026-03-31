@@ -12,21 +12,24 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _apiKeyController = TextEditingController();
   final _emailController = TextEditingController();
+  final _nameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
     _apiKeyController.dispose();
     _emailController.dispose();
+    _nameController.dispose();
     super.dispose();
   }
 
   void _login() async {
     if (_formKey.currentState!.validate()) {
       await context.read<AuthProvider>().login(
-            _apiKeyController.text.trim(),
-            _emailController.text.trim(),
-          );
+        _apiKeyController.text.trim(),
+        _emailController.text.trim(),
+        _nameController.text.trim(),
+      );
     }
   }
 
@@ -52,6 +55,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Username',
+                      prefixIcon: Icon(Icons.badge_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter your sender name';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _emailController,
                     decoration: const InputDecoration(
@@ -90,10 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: _login,
-                    child: const Text('Login'),
-                  ),
+                  FilledButton(onPressed: _login, child: const Text('Login')),
                 ],
               ),
             ),

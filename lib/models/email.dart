@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class Email {
   final String id;
   final String from;
@@ -33,6 +35,27 @@ class Email {
           .toList(),
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'from': from,
+      'to': to,
+      'subject': subject,
+      'html': html,
+      'text': text,
+      'created_at': createdAt.toIso8601String(),
+      'attachments': attachments
+          .map((attachment) => attachment.toJson())
+          .toList(),
+    };
+  }
+
+  String toRawJson() => jsonEncode(toJson());
+
+  factory Email.fromRawJson(String source) {
+    return Email.fromJson(jsonDecode(source) as Map<String, dynamic>);
+  }
 }
 
 class Attachment {
@@ -55,6 +78,15 @@ class Attachment {
       contentType: json['content_type'],
       size: json['size'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'filename': filename,
+      'content_type': contentType,
+      'size': size,
+    };
   }
 }
 
@@ -82,4 +114,54 @@ class EmailListItem {
       createdAt: DateTime.parse(json['created_at']),
     );
   }
+
+  factory EmailListItem.fromEmail(Email email) {
+    return EmailListItem(
+      id: email.id,
+      from: email.from,
+      to: email.to,
+      subject: email.subject,
+      createdAt: email.createdAt,
+    );
+  }
+}
+
+class ContactEntry {
+  final String email;
+  final String name;
+
+  const ContactEntry({required this.email, required this.name});
+
+  String get label => name.isNotEmpty ? '$name <$email>' : email;
+}
+
+String formatMailbox(String email, {String? name}) {
+  final trimmedEmail = email.trim();
+  final trimmedName = name?.trim() ?? '';
+  if (trimmedName.isEmpty) {
+    return trimmedEmail;
+  }
+  return '$trimmedName <$trimmedEmail>';
+}
+
+String extractEmailAddress(String mailbox) {
+  final match = RegExp(r'<([^>]+)>').firstMatch(mailbox);
+  if (match != null) {
+    return match.group(1)!.trim();
+  }
+  return mailbox.trim();
+}
+
+String extractDisplayName(String mailbox) {
+  final match = RegExp(r'^(.*?)\s*<[^>]+>$').firstMatch(mailbox.trim());
+  if (match != null) {
+    return match.group(1)!.trim();
+  }
+
+  final email = extractEmailAddress(mailbox);
+  final atIndex = email.indexOf('@');
+  if (atIndex > 0) {
+    return email.substring(0, atIndex);
+  }
+  return email;
 }
