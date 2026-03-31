@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 import '../models/email.dart';
 import '../providers/auth_provider.dart';
 import '../providers/email_provider.dart';
@@ -12,6 +15,50 @@ class EmailDetailScreen extends StatelessWidget {
   final bool isReceived;
 
   const EmailDetailScreen({super.key, required this.id, required this.isReceived});
+
+  void _downloadAttachment(BuildContext context, String attachmentId, String filename) async {
+    final auth = context.read<AuthProvider>();
+    final service = ResendService(auth.apiKey!);
+
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Downloading $filename...')),
+      );
+
+      final bytes = await service.downloadAttachment(id, attachmentId);
+      
+      // Get directory to save (e.g. Downloads or Documents)
+      Directory? dir;
+      if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+        dir = await getDownloadsDirectory();
+      }
+      dir ??= await getApplicationDocumentsDirectory();
+
+      final filePath = path.join(dir.path, filename);
+      final file = File(filePath);
+      await file.writeAsBytes(bytes);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Saved to $filePath'),
+            action: SnackBarAction(
+              label: 'Open Folder',
+              onPressed: () {
+                // Potential to use url_launcher to open the directory
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to download: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,6 +119,22 @@ class EmailDetailScreen extends StatelessWidget {
                   Text(email.text!)
                 else
                   const Text('No content available.', style: TextStyle(fontStyle: FontStyle.italic)),
+                
+                if (email.attachments.isNotEmpty) ...[
+                  const Divider(height: 48),
+                  const Text('Attachments:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: email.attachments.map((a) {
+                      return ActionChip(
+                        avatar: const Icon(Icons.attach_file, size: 16),
+                        label: Text(a.filename),
+                        onPressed: () => _downloadAttachment(context, a.id, a.filename),
+                      );
+                    }).toList(),
+                  ),
+                ],
               ],
             ),
           );

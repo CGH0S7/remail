@@ -53,6 +53,18 @@ class ResendService {
     }
   }
 
+  Future<List<int>> downloadAttachment(String emailId, String attachmentId) async {
+    final response = await http.get(
+      Uri.parse('$_baseUrl/emails/receiving/$emailId/attachments/$attachmentId'),
+      headers: _headers,
+    );
+    if (response.statusCode == 200) {
+      return response.bodyBytes;
+    } else {
+      throw Exception('Failed to download attachment: ${response.body}');
+    }
+  }
+
   Future<void> sendEmail({
     required String from,
     required List<String> to,
