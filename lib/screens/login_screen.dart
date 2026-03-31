@@ -50,7 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const Icon(Icons.email, size: 64, color: Colors.blue),
                   const SizedBox(height: 16),
                   Text(
-                    'Welcome to Rusend Next',
+                    'Welcome to Remail',
                     style: Theme.of(context).textTheme.headlineMedium,
                     textAlign: TextAlign.center,
                   ),

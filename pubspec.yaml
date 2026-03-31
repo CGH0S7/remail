@@ -1,5 +1,5 @@
 name: rusend_next
-description: "A new Flutter project."
+description: "Gmail-like client for resend.com"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -43,6 +43,7 @@ dependencies:
   path: ^1.9.1
   url_launcher: ^6.3.2
   path_provider: ^2.1.5
+  package_info_plus: ^8.3.1
 
 dev_dependencies:
   flutter_test:

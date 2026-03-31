@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512"
+viewBox="0 0 512 512"
+xmlns="http://www.w3.org/2000/svg">
+
+<!-- Material rounded rectangle background -->
+<rect
+x="0"
+y="0"
+width="512"
+height="512"
+rx="96"
+fill="white"/>
+
+<!-- envelope body -->
+<rect
+x="116"
+y="170"
+width="280"
+height="180"
+rx="24"
+fill="#42A5F5"/>
+
+<!-- envelope flap -->
+<path
+d="M116 190 L256 290 L396 190"
+stroke="white"
+stroke-width="22"
+fill="none"
+stroke-linecap="round"/>
+
+<!-- arrow head -->
+<polygon
+points="265,225 305,225 285,190"
+fill="#42A5F5"/>
+
+</svg>

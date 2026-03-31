@@ -22,7 +22,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Welcome to Rusend Next'), findsOneWidget);
+    expect(find.text('Welcome to Remail'), findsOneWidget);
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

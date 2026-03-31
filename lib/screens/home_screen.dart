@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import '../models/email.dart';
 import '../providers/auth_provider.dart';
@@ -24,10 +25,12 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _selectedEmailId;
   final ScrollController _scrollController = ScrollController();
   bool _isFabExtended = true;
+  late final Future<PackageInfo> _packageInfoFuture;
 
   @override
   void initState() {
     super.initState();
+    _packageInfoFuture = PackageInfo.fromPlatform();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchEmails();
@@ -91,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context) {
             return AlertDialog(
               title: const Text('Confirm logout'),
-              content: const Text('Sign out from Rusend Next on this device?'),
+              content: const Text('Sign out from Remail on this device?'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
@@ -168,68 +171,103 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildDrawer({required bool isPermanent}) {
     final auth = context.watch<AuthProvider>();
     final selectedIndex = _selectedSection.index;
-
-    return NavigationDrawer(
-      selectedIndex: selectedIndex,
-      onDestinationSelected: (index) {
-        _setSection(MailSection.values[index], closeDrawer: !isPermanent);
-      },
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(28, 16, 16, 10),
-          child: Text(
-            'Rusend Next',
-            style: Theme.of(context).textTheme.titleSmall,
+    final content = SafeArea(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 20, 16, 10),
+            child: Text(
+              'Remail',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
           ),
-        ),
-        const NavigationDrawerDestination(
-          icon: Icon(Icons.inbox_outlined),
-          selectedIcon: Icon(Icons.inbox),
-          label: Text('Inbox'),
-        ),
-        const NavigationDrawerDestination(
-          icon: Icon(Icons.send_outlined),
-          selectedIcon: Icon(Icons.send),
-          label: Text('Sent'),
-        ),
-        const NavigationDrawerDestination(
-          icon: Icon(Icons.people_outline),
-          selectedIcon: Icon(Icons.people),
-          label: Text('Contacts'),
-        ),
-        const NavigationDrawerDestination(
-          icon: Icon(Icons.star_border),
-          selectedIcon: Icon(Icons.star),
-          label: Text('Starred'),
-        ),
-        const NavigationDrawerDestination(
-          icon: Icon(Icons.settings_outlined),
-          selectedIcon: Icon(Icons.settings),
-          label: Text('Settings'),
-        ),
-        const Divider(indent: 28, endIndent: 28),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(28, 16, 16, 4),
-          child: Text(
-            auth.displayName ?? '',
-            style: Theme.of(context).textTheme.titleSmall,
+          Expanded(
+            child: NavigationDrawer(
+              selectedIndex: selectedIndex,
+              onDestinationSelected: (index) {
+                _setSection(
+                  MailSection.values[index],
+                  closeDrawer: !isPermanent,
+                );
+              },
+              children: const [
+                NavigationDrawerDestination(
+                  icon: Icon(Icons.inbox_outlined),
+                  selectedIcon: Icon(Icons.inbox),
+                  label: Text('Inbox'),
+                ),
+                NavigationDrawerDestination(
+                  icon: Icon(Icons.send_outlined),
+                  selectedIcon: Icon(Icons.send),
+                  label: Text('Sent'),
+                ),
+                NavigationDrawerDestination(
+                  icon: Icon(Icons.people_outline),
+                  selectedIcon: Icon(Icons.people),
+                  label: Text('Contacts'),
+                ),
+                NavigationDrawerDestination(
+                  icon: Icon(Icons.star_border),
+                  selectedIcon: Icon(Icons.star),
+                  label: Text('Starred'),
+                ),
+                NavigationDrawerDestination(
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings),
+                  label: Text('Settings'),
+                ),
+              ],
+            ),
           ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(28, 0, 16, 10),
-          child: Text(
-            auth.defaultFrom ?? '',
-            style: Theme.of(context).textTheme.bodySmall,
+          const Divider(indent: 28, endIndent: 28),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 12, 16, 4),
+            child: Text(
+              auth.displayName ?? '',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
           ),
-        ),
-        ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 28),
-          leading: const Icon(Icons.logout),
-          title: const Text('Logout'),
-          onTap: () => _confirmLogout(closeDrawer: !isPermanent),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 0, 16, 4),
+            child: Text(
+              auth.defaultFrom ?? '',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 0, 16, 12),
+            child: FutureBuilder<PackageInfo>(
+              future: _packageInfoFuture,
+              builder: (context, snapshot) {
+                final version = snapshot.hasData
+                    ? 'Version ${snapshot.data!.version}+${snapshot.data!.buildNumber}'
+                    : 'Version...';
+                return Text(
+                  version,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                );
+              },
+            ),
+          ),
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+            leading: const Icon(Icons.logout),
+            title: const Text('Logout'),
+            onTap: () => _confirmLogout(closeDrawer: !isPermanent),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
     );
+
+    if (isPermanent) {
+      return SizedBox(width: 320, child: content);
+    }
+
+    return Drawer(child: content);
   }
 
   bool get _showsEmailPreview {
