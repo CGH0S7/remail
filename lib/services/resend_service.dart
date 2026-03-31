@@ -54,14 +54,25 @@ class ResendService {
   }
 
   Future<List<int>> downloadAttachment(String emailId, String attachmentId) async {
-    final response = await http.get(
+    final infoResponse = await http.get(
       Uri.parse('$_baseUrl/emails/receiving/$emailId/attachments/$attachmentId'),
       headers: _headers,
     );
-    if (response.statusCode == 200) {
-      return response.bodyBytes;
+    
+    if (infoResponse.statusCode == 200) {
+      final info = json.decode(infoResponse.body);
+      final downloadUrl = info['download_url'] as String;
+      
+      // Download the actual binary content from the signed URL
+      final fileResponse = await http.get(Uri.parse(downloadUrl));
+      
+      if (fileResponse.statusCode == 200) {
+        return fileResponse.bodyBytes;
+      } else {
+        throw Exception('Failed to download file from CDN: ${fileResponse.body}');
+      }
     } else {
-      throw Exception('Failed to download attachment: ${response.body}');
+      throw Exception('Failed to get attachment info: ${infoResponse.body}');
     }
   }
 
