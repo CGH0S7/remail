@@ -25,6 +25,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _selectedEmailId;
   final ScrollController _scrollController = ScrollController();
   bool _isFabExtended = true;
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
   late final Future<PackageInfo> _packageInfoFuture;
 
   @override
@@ -32,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _packageInfoFuture = PackageInfo.fromPlatform();
     _scrollController.addListener(_onScroll);
+    _searchController.addListener(_onSearchChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchEmails();
     });
@@ -41,7 +44,15 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text;
+    });
   }
 
   void _onScroll() {
@@ -76,6 +87,8 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _selectedSection = section;
       _selectedEmailId = null;
+      _searchQuery = '';
+      _searchController.clear();
     });
     if (closeDrawer) {
       Navigator.pop(context);
@@ -279,7 +292,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildSectionBody({required bool isWide}) {
     switch (_selectedSection) {
       case MailSection.settings:
-        return const SettingsScreen();
+        return CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            _buildSliverAppBar(title: 'Search settings'),
+            const SliverToBoxAdapter(child: SettingsScreen()),
+          ],
+        );
       case MailSection.contacts:
         return _buildContactsView();
       case MailSection.starred:
@@ -300,11 +319,22 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildSliverList(
             isWide: isWide,
             emailsSelector: (provider) {
-              return _selectedSection == MailSection.inbox
+              final emails = _selectedSection == MailSection.inbox
                   ? provider.receivedEmails
                   : provider.sentEmails;
+              if (_searchQuery.isEmpty) {
+                return emails;
+              }
+              final query = _searchQuery.toLowerCase();
+              return emails.where((email) {
+                return email.subject.toLowerCase().contains(query) ||
+                    email.from.toLowerCase().contains(query) ||
+                    email.to.any((t) => t.toLowerCase().contains(query));
+              }).toList();
             },
-            emptyText: 'Nothing to see here.',
+            emptyText: _searchQuery.isEmpty
+                ? 'Nothing to see here.'
+                : 'No results for "$_searchQuery"',
             isReceived: _selectedSection == MailSection.inbox,
           ),
         ],
@@ -319,14 +349,26 @@ class _HomeScreenState extends State<HomeScreen> {
         _buildSliverAppBar(title: 'Starred mail'),
         Consumer<EmailProvider>(
           builder: (context, provider, child) {
-            final emails = provider.starredEmails
+            var emails = provider.starredEmails
                 .map(EmailListItem.fromEmail)
                 .toList();
+
+            if (_searchQuery.isNotEmpty) {
+              final query = _searchQuery.toLowerCase();
+              emails = emails.where((email) {
+                return email.subject.toLowerCase().contains(query) ||
+                    email.from.toLowerCase().contains(query) ||
+                    email.to.any((t) => t.toLowerCase().contains(query));
+              }).toList();
+            }
+
             if (emails.isEmpty) {
-              return const SliverFillRemaining(
+              return SliverFillRemaining(
                 child: Center(
                   child: Text(
-                    'No starred emails yet. Starred mail is cached locally.',
+                    _searchQuery.isEmpty
+                        ? 'No starred emails yet. Starred mail is cached locally.'
+                        : 'No results for "$_searchQuery"',
                   ),
                 ),
               );
@@ -352,44 +394,77 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildContactsView() {
     return Consumer<EmailProvider>(
       builder: (context, provider, child) {
-        final contacts = provider.contacts;
-        return ListView.builder(
-          padding: const EdgeInsets.all(24),
-          itemCount: contacts.length + 1,
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Text(
-                  contacts.isEmpty
-                      ? 'Contacts will appear after you load inbox or sent mail.'
-                      : 'Contacts are inferred from your recent senders and recipients.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              );
-            }
+        var contacts = provider.contacts;
+        if (_searchQuery.isNotEmpty) {
+          final query = _searchQuery.toLowerCase();
+          contacts = contacts.where((contact) {
+            return contact.name.toLowerCase().contains(query) ||
+                contact.email.toLowerCase().contains(query);
+          }).toList();
+        }
 
-            final contact = contacts[index - 1];
-            return Card(
-              child: ListTile(
-                leading: CircleAvatar(
-                  child: Text(contact.name.substring(0, 1).toUpperCase()),
+        return CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            _buildSliverAppBar(title: 'Search contacts'),
+            if (contacts.isEmpty)
+              SliverFillRemaining(
+                child: Center(
+                  child: Text(
+                    _searchQuery.isEmpty
+                        ? 'Contacts will appear after you load inbox or sent mail.'
+                        : 'No results for "$_searchQuery"',
+                  ),
                 ),
-                title: Text(contact.name),
-                subtitle: Text(contact.email),
-                trailing: const Icon(Icons.edit_outlined),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          ComposeScreen(initialTo: [contact.email]),
-                    ),
-                  );
-                },
+              )
+            else ...[
+              SliverPadding(
+                padding: const EdgeInsets.all(24),
+                sliver: SliverToBoxAdapter(
+                  child: Text(
+                    _searchQuery.isEmpty
+                        ? 'Contacts are inferred from your recent senders and recipients.'
+                        : 'Results for "$_searchQuery"',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
               ),
-            );
-          },
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final contact = contacts[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            child: Text(
+                              contact.name.substring(0, 1).toUpperCase(),
+                            ),
+                          ),
+                          title: Text(contact.name),
+                          subtitle: Text(contact.email),
+                          trailing: const Icon(Icons.edit_outlined),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ComposeScreen(
+                                  initialTo: [contact.email],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                    childCount: contacts.length,
+                  ),
+                ),
+              ),
+            ],
+          ],
         );
       },
     );
@@ -421,28 +496,45 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 12,
+                  vertical: 4,
                 ),
                 child: Row(
                   children: [
                     MediaQuery.of(context).size.width > 900
-                        ? const Icon(Icons.search)
+                        ? const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Icon(Icons.search),
+                        )
                         : IconButton(
                             icon: const Icon(Icons.menu),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
                             onPressed: () => Scaffold.of(context).openDrawer(),
                           ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 4),
                     Expanded(
-                      child: Text(
-                        title ?? 'Search in emails',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontSize: 16,
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: title ?? 'Search in mail',
+                          border: InputBorder.none,
+                          hintStyle: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            fontSize: 16,
+                          ),
                         ),
+                        style: const TextStyle(fontSize: 16),
+                        onSubmitted: (value) {
+                          // Optional: can trigger something on submit
+                        },
                       ),
                     ),
+                    if (_searchQuery.isNotEmpty)
+                      IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                        },
+                      ),
+                    const SizedBox(width: 8),
                     CircleAvatar(
                       radius: 16,
                       backgroundColor: Theme.of(context).colorScheme.primary,
