@@ -35,8 +35,7 @@ class ResendService {
   }
 
   Future<List<EmailListItem>> listReceivedEmails() async {
-    // Note: This endpoint is based on the rusend implementation (resend.receiving.list)
-    final response = await http.get(Uri.parse('$_baseUrl/receiving/emails'), headers: _headers);
+    final response = await http.get(Uri.parse('$_baseUrl/emails/receiving'), headers: _headers);
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return (data['data'] as List).map((e) => EmailListItem.fromJson(e)).toList();
@@ -46,7 +45,7 @@ class ResendService {
   }
 
   Future<Email> getReceivedEmail(String id) async {
-    final response = await http.get(Uri.parse('$_baseUrl/receiving/emails/$id'), headers: _headers);
+    final response = await http.get(Uri.parse('$_baseUrl/emails/receiving/$id'), headers: _headers);
     if (response.statusCode == 200) {
       return Email.fromJson(json.decode(response.body));
     } else {
