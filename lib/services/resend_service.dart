@@ -11,22 +11,30 @@ class ResendService {
   ResendService(this.apiKey);
 
   Map<String, String> get _headers => {
-        'Authorization': 'Bearer $apiKey',
-        'Content-Type': 'application/json',
-      };
+    'Authorization': 'Bearer $apiKey',
+    'Content-Type': 'application/json',
+  };
 
   Future<List<EmailListItem>> listSentEmails() async {
-    final response = await http.get(Uri.parse('$_baseUrl/emails'), headers: _headers);
+    final response = await http.get(
+      Uri.parse('$_baseUrl/emails'),
+      headers: _headers,
+    );
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return (data['data'] as List).map((e) => EmailListItem.fromJson(e)).toList();
+      return (data['data'] as List)
+          .map((e) => EmailListItem.fromJson(e))
+          .toList();
     } else {
       throw Exception('Failed to list sent emails: ${response.body}');
     }
   }
 
   Future<Email> getSentEmail(String id) async {
-    final response = await http.get(Uri.parse('$_baseUrl/emails/$id'), headers: _headers);
+    final response = await http.get(
+      Uri.parse('$_baseUrl/emails/$id'),
+      headers: _headers,
+    );
     if (response.statusCode == 200) {
       return Email.fromJson(json.decode(response.body));
     } else {
@@ -35,17 +43,25 @@ class ResendService {
   }
 
   Future<List<EmailListItem>> listReceivedEmails() async {
-    final response = await http.get(Uri.parse('$_baseUrl/emails/receiving'), headers: _headers);
+    final response = await http.get(
+      Uri.parse('$_baseUrl/emails/receiving'),
+      headers: _headers,
+    );
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return (data['data'] as List).map((e) => EmailListItem.fromJson(e)).toList();
+      return (data['data'] as List)
+          .map((e) => EmailListItem.fromJson(e))
+          .toList();
     } else {
       throw Exception('Failed to list received emails: ${response.body}');
     }
   }
 
   Future<Email> getReceivedEmail(String id) async {
-    final response = await http.get(Uri.parse('$_baseUrl/emails/receiving/$id'), headers: _headers);
+    final response = await http.get(
+      Uri.parse('$_baseUrl/emails/receiving/$id'),
+      headers: _headers,
+    );
     if (response.statusCode == 200) {
       return Email.fromJson(json.decode(response.body));
     } else {
@@ -53,23 +69,30 @@ class ResendService {
     }
   }
 
-  Future<List<int>> downloadAttachment(String emailId, String attachmentId) async {
+  Future<List<int>> downloadAttachment(
+    String emailId,
+    String attachmentId,
+  ) async {
     final infoResponse = await http.get(
-      Uri.parse('$_baseUrl/emails/receiving/$emailId/attachments/$attachmentId'),
+      Uri.parse(
+        '$_baseUrl/emails/receiving/$emailId/attachments/$attachmentId',
+      ),
       headers: _headers,
     );
-    
+
     if (infoResponse.statusCode == 200) {
       final info = json.decode(infoResponse.body);
       final downloadUrl = info['download_url'] as String;
-      
+
       // Download the actual binary content from the signed URL
       final fileResponse = await http.get(Uri.parse(downloadUrl));
-      
+
       if (fileResponse.statusCode == 200) {
         return fileResponse.bodyBytes;
       } else {
-        throw Exception('Failed to download file from CDN: ${fileResponse.body}');
+        throw Exception(
+          'Failed to download file from CDN: ${fileResponse.body}',
+        );
       }
     } else {
       throw Exception('Failed to get attachment info: ${infoResponse.body}');
