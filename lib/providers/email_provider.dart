@@ -6,6 +6,7 @@ import '../services/resend_service.dart';
 class EmailProvider extends ChangeNotifier {
   static const String _readPrefsKey = 'read_email_ids';
   static const String _starredPrefsKey = 'starred_emails';
+  static const String _draftPrefsKey = 'draft_emails';
 
   List<EmailListItem> _sentEmails = [];
   List<EmailListItem> _receivedEmails = [];
@@ -14,6 +15,7 @@ class EmailProvider extends ChangeNotifier {
 
   final Set<String> _readEmailIds = {};
   final Map<String, Email> _starredEmails = {};
+  final Map<String, DraftEmail> _draftEmails = {};
 
   EmailProvider() {
     _loadLocalState();
@@ -24,6 +26,12 @@ class EmailProvider extends ChangeNotifier {
   List<Email> get starredEmails {
     final items = _starredEmails.values.toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return items;
+  }
+
+  List<DraftEmail> get draftEmails {
+    final items = _draftEmails.values.toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     return items;
   }
 
@@ -84,6 +92,13 @@ class EmailProvider extends ChangeNotifier {
       final email = Email.fromRawJson(rawEmail);
       _starredEmails[email.id] = email;
     }
+
+    _draftEmails.clear();
+    final draftJson = prefs.getStringList(_draftPrefsKey) ?? const [];
+    for (final rawDraft in draftJson) {
+      final draft = DraftEmail.fromRawJson(rawDraft);
+      _draftEmails[draft.id] = draft;
+    }
     notifyListeners();
   }
 
@@ -94,6 +109,36 @@ class EmailProvider extends ChangeNotifier {
       _starredPrefsKey,
       _starredEmails.values.map((email) => email.toRawJson()).toList(),
     );
+    await prefs.setStringList(
+      _draftPrefsKey,
+      _draftEmails.values.map((draft) => draft.toRawJson()).toList(),
+    );
+  }
+
+  DraftEmail saveDraft({
+    String? id,
+    required List<String> to,
+    required String subject,
+    required String body,
+  }) {
+    final draft = DraftEmail(
+      id: id ?? DateTime.now().microsecondsSinceEpoch.toString(),
+      to: to,
+      subject: subject,
+      body: body,
+      updatedAt: DateTime.now(),
+    );
+    _draftEmails[draft.id] = draft;
+    _persistLocalState();
+    notifyListeners();
+    return draft;
+  }
+
+  Future<void> deleteDraft(String id) async {
+    if (_draftEmails.remove(id) != null) {
+      await _persistLocalState();
+      notifyListeners();
+    }
   }
 
   void markAsRead(String id) {

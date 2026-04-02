@@ -3,6 +3,7 @@ import 'package:flutter/rendering.dart';
 import 'package:intl/intl.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/email.dart';
 import '../providers/auth_provider.dart';
 import '../providers/email_provider.dart';
@@ -11,7 +12,7 @@ import 'compose_screen.dart';
 import 'email_detail_screen.dart';
 import 'settings_screen.dart';
 
-enum MailSection { inbox, sent, contacts, starred, settings }
+enum MailSection { inbox, sent, draft, contacts, starred, settings, about }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -137,7 +138,9 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       drawer: isWide ? null : _buildDrawer(isPermanent: false),
       body: body,
-      floatingActionButton: _selectedSection == MailSection.settings
+      floatingActionButton:
+          _selectedSection == MailSection.settings ||
+              _selectedSection == MailSection.about
           ? null
           : FloatingActionButton.extended(
               onPressed: () {
@@ -216,6 +219,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   label: Text('Sent'),
                 ),
                 NavigationDrawerDestination(
+                  icon: Icon(Icons.drafts_outlined),
+                  selectedIcon: Icon(Icons.drafts),
+                  label: Text('Draft'),
+                ),
+                NavigationDrawerDestination(
                   icon: Icon(Icons.people_outline),
                   selectedIcon: Icon(Icons.people),
                   label: Text('Contacts'),
@@ -229,6 +237,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: Icon(Icons.settings_outlined),
                   selectedIcon: Icon(Icons.settings),
                   label: Text('Settings'),
+                ),
+                NavigationDrawerDestination(
+                  icon: Icon(Icons.info_outline),
+                  selectedIcon: Icon(Icons.info),
+                  label: Text('About'),
                 ),
               ],
             ),
@@ -291,6 +304,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildSectionBody({required bool isWide}) {
     switch (_selectedSection) {
+      case MailSection.about:
+        return _buildAboutView();
+      case MailSection.draft:
+        return _buildDraftsView();
       case MailSection.settings:
         return CustomScrollView(
           controller: _scrollController,
@@ -307,6 +324,120 @@ class _HomeScreenState extends State<HomeScreen> {
       case MailSection.sent:
         return _buildEmailListView(isWide: isWide);
     }
+  }
+
+  Widget _buildDraftsView() {
+    return Consumer<EmailProvider>(
+      builder: (context, provider, child) {
+        var drafts = provider.draftEmails;
+        if (_searchQuery.isNotEmpty) {
+          final query = _searchQuery.toLowerCase();
+          drafts = drafts.where((draft) {
+            return draft.subject.toLowerCase().contains(query) ||
+                draft.body.toLowerCase().contains(query) ||
+                draft.to.any(
+                  (recipient) => recipient.toLowerCase().contains(query),
+                );
+          }).toList();
+        }
+
+        return CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            _buildSliverAppBar(title: 'Search drafts'),
+            if (drafts.isEmpty)
+              SliverFillRemaining(
+                child: Center(
+                  child: Text(
+                    _searchQuery.isEmpty
+                        ? 'No saved drafts yet.'
+                        : 'No results for "$_searchQuery"',
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final draft = drafts[index];
+                    final recipients = draft.to.isEmpty
+                        ? 'No recipients'
+                        : draft.to.join(', ');
+                    final updatedAt = DateFormat(
+                      'MMM d, HH:mm',
+                    ).format(draft.updatedAt);
+                    final preview = draft.body.trim().isEmpty
+                        ? 'No message body'
+                        : draft.body.trim().replaceAll('\n', ' ');
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 8,
+                        ),
+                        leading: const CircleAvatar(
+                          child: Icon(Icons.drafts_outlined),
+                        ),
+                        title: Text(
+                          draft.subject.trim().isEmpty
+                              ? '(No subject)'
+                              : draft.subject.trim(),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(
+                              recipients,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              preview,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              updatedAt,
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          tooltip: 'Delete draft',
+                          onPressed: () => provider.deleteDraft(draft.id),
+                        ),
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ComposeScreen(
+                                draftId: draft.id,
+                                initialTo: draft.to,
+                                initialSubject: draft.subject,
+                                initialBody: draft.body,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  }, childCount: drafts.length),
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
 
   Widget _buildEmailListView({required bool isWide}) {
@@ -432,35 +563,31 @@ class _HomeScreenState extends State<HomeScreen> {
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final contact = contacts[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            child: Text(
-                              contact.name.substring(0, 1).toUpperCase(),
-                            ),
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final contact = contacts[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          child: Text(
+                            contact.name.substring(0, 1).toUpperCase(),
                           ),
-                          title: Text(contact.name),
-                          subtitle: Text(contact.email),
-                          trailing: const Icon(Icons.edit_outlined),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ComposeScreen(
-                                  initialTo: [contact.email],
-                                ),
-                              ),
-                            );
-                          },
                         ),
-                      );
-                    },
-                    childCount: contacts.length,
-                  ),
+                        title: Text(contact.name),
+                        subtitle: Text(contact.email),
+                        trailing: const Icon(Icons.edit_outlined),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  ComposeScreen(initialTo: [contact.email]),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  }, childCount: contacts.length),
                 ),
               ),
             ],
@@ -468,6 +595,118 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
+  }
+
+  Widget _buildAboutView() {
+    const repoUrl = 'https://github.com/CGH0S7/remail/';
+    return FutureBuilder<PackageInfo>(
+      future: _packageInfoFuture,
+      builder: (context, snapshot) {
+        final version = snapshot.hasData
+            ? 'v${snapshot.data!.version}'
+            : 'Loading version...';
+
+        return CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            _buildSliverAppBar(title: 'Search project info'),
+            SliverPadding(
+              padding: const EdgeInsets.all(24),
+              sliver: SliverToBoxAdapter(
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: Image.asset(
+                              'assets/icon.png',
+                              width: 96,
+                              height: 96,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Text(
+                          'Remail',
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          version,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'A high-fidelity Gmail-inspired Flutter client for the Resend.com email service.',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Open source repository',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        SelectableText(
+                          repoUrl,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton.icon(
+                          onPressed: () => _openExternalLink(repoUrl),
+                          icon: const Icon(Icons.open_in_new),
+                          label: const Text('Open GitHub'),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Built for managing Resend inbox and outgoing email with a Gmail-like workflow, including inbox, sent mail, contacts, starring, drafts, and settings.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        // Uncomment this block after the app is published on F-Droid.
+                        // const SizedBox(height: 24),
+                        // Text(
+                        //   'F-Droid',
+                        //   style: Theme.of(context).textTheme.titleMedium,
+                        // ),
+                        // const SizedBox(height: 8),
+                        // Text(
+                        //   'Install Remail from the F-Droid catalog for a fully open-source distribution channel.',
+                        //   style: Theme.of(context).textTheme.bodyMedium,
+                        // ),
+                        // const SizedBox(height: 12),
+                        // FilledButton.icon(
+                        //   onPressed: () => _openExternalLink(
+                        //     'https://f-droid.org/packages/YOUR.PACKAGE.ID/',
+                        //   ),
+                        //   icon: const Icon(Icons.open_in_new),
+                        //   label: const Text('Open F-Droid'),
+                        // ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _openExternalLink(String url) async {
+    final uri = Uri.parse(url);
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not open $url')));
+    }
   }
 
   Widget _buildSliverAppBar({String? title}) {
@@ -502,9 +741,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     MediaQuery.of(context).size.width > 900
                         ? const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Icon(Icons.search),
-                        )
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            child: Icon(Icons.search),
+                          )
                         : IconButton(
                             icon: const Icon(Icons.menu),
                             onPressed: () => Scaffold.of(context).openDrawer(),
@@ -517,7 +756,9 @@ class _HomeScreenState extends State<HomeScreen> {
                           hintText: title ?? 'Search in mail',
                           border: InputBorder.none,
                           hintStyle: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                             fontSize: 16,
                           ),
                         ),

@@ -126,6 +126,48 @@ class EmailListItem {
   }
 }
 
+class DraftEmail {
+  final String id;
+  final List<String> to;
+  final String subject;
+  final String body;
+  final DateTime updatedAt;
+
+  const DraftEmail({
+    required this.id,
+    required this.to,
+    required this.subject,
+    required this.body,
+    required this.updatedAt,
+  });
+
+  factory DraftEmail.fromJson(Map<String, dynamic> json) {
+    return DraftEmail(
+      id: json['id'] as String,
+      to: (json['to'] as List? ?? const []).cast<String>(),
+      subject: json['subject'] as String? ?? '',
+      body: json['body'] as String? ?? '',
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'to': to,
+      'subject': subject,
+      'body': body,
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
+
+  String toRawJson() => jsonEncode(toJson());
+
+  factory DraftEmail.fromRawJson(String source) {
+    return DraftEmail.fromJson(jsonDecode(source) as Map<String, dynamic>);
+  }
+}
+
 class ContactEntry {
   final String email;
   final String name;

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:rusend_next/main.dart';
-import 'package:rusend_next/providers/auth_provider.dart';
-import 'package:rusend_next/providers/email_provider.dart';
+import 'package:remail/main.dart';
+import 'package:remail/providers/auth_provider.dart';
+import 'package:remail/providers/email_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
