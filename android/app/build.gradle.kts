@@ -23,7 +23,7 @@ android {
         applicationId = "ink.hifuu.rusend_next"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = (project.findProperty("versionCodeOverride") as String?)?.toInt() ?: flutter.versionCode
+        versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
