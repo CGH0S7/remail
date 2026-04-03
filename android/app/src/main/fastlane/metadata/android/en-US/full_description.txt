@@ -1,1 +1,13 @@
-Remail is an open-source email client specifically designed for the Resend.com service. It provides a familiar, Gmail-like interface to help you manage your emails efficiently and seamlessly.
+**Remail** is a modern, open-source mobile client specifically designed for the Resend.com email platform. Inspired by the familiar Gmail interface, it brings a intuitive email experience to your fingertips.
+
+**Key Features:**
+- **Gmail-inspired Interface:** Navigate your emails with ease using a clean, familiar, and responsive design.
+- **Complete Email Management:** Effortlessly view your Resend.com email history.
+- **Powerful Composer:** Compose emails with support for attachments, and multiple recipient fields.
+- **Secure & Private:** Your Resend API Key is stored locally and securely. 
+
+**How to Use:**
+1. **Get your API Key:** Log in to your Resend.com dashboard and generate a new API Key with full permissions.
+2. **Authentication:** Open Remail and enter your API Key and default address to securely sync your account.
+3. **Start Sending:** Use the compose button to send your first email through Resend's reliable infrastructure.
+4. **Manage:** Just like Gmail.
