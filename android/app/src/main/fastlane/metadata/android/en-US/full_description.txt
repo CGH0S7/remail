@@ -1,0 +1,1 @@
+Remail is an open-source email client specifically designed for the Resend.com service. It provides a familiar, Gmail-like interface to help you manage your emails efficiently and seamlessly.
