@@ -1,13 +1,17 @@
-**Remail** is a modern, open-source mobile client specifically designed for the Resend.com email platform. Inspired by the familiar Gmail interface, it brings a intuitive email experience to your fingertips.
+<b>Remail</b> is a modern, open-source mobile client specifically designed for the Resend.com email platform. Inspired by the familiar Gmail interface, it brings an intuitive email experience to your fingertips.
 
-**Key Features:**
-- **Gmail-inspired Interface:** Navigate your emails with ease using a clean, familiar, and responsive design.
-- **Complete Email Management:** Effortlessly view your Resend.com email history.
-- **Powerful Composer:** Compose emails with support for attachments, and multiple recipient fields.
-- **Secure & Private:** Your Resend API Key is stored locally and securely. 
+<b>Key Features:</b><br>
+<ul>
+  <li><b>Gmail-inspired Interface:</b> Navigate your emails with ease using a clean, familiar, and responsive design.</li>
+  <li><b>Complete Email Management:</b> Effortlessly view your Resend.com email history.</li>
+  <li><b>Powerful Composer:</b> Compose emails with support for attachments and multiple recipient fields.</li>
+  <li><b>Secure &amp; Private:</b> Your Resend API key is stored locally and securely.</li>
+</ul>
 
-**How to Use:**
-1. **Get your API Key:** Log in to your Resend.com dashboard and generate a new API Key with full permissions.
-2. **Authentication:** Open Remail and enter your API Key and default address to securely sync your account.
-3. **Start Sending:** Use the compose button to send your first email through Resend's reliable infrastructure.
-4. **Manage:** Just like Gmail.
+<b>How to Use:</b><br>
+<ol>
+  <li><b>Get your API Key:</b> Log in to your Resend.com dashboard and generate a new API key with full permissions.</li>
+  <li><b>Authentication:</b> Open Remail and enter your API key and default address to securely sync your account.</li>
+  <li><b>Start Sending:</b> Use the compose button to send your first email through Resend's infrastructure.</li>
+  <li><b>Manage:</b> Use the inbox and composer like a streamlined Gmail-style client for Resend.</li>
+</ol>
