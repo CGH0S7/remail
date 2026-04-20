@@ -1,0 +1,3 @@
+Update release metadata for F-Droid submission.
+Pin Flutter version in the repository.
+Use ABI-specific version codes for split APK builds.
