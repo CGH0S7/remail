@@ -1,0 +1,3 @@
+Use a dedicated release signing key for Android release builds.
+Improve release metadata for F-Droid reproducible builds.
+Prepare the 1.0.3 release.
