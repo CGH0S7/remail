@@ -10,4 +10,4 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.4'
+          flutter-version: 'ff37bef603469fb030f2b72995ab929ccfc227f0'
