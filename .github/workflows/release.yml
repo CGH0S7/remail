@@ -6,6 +6,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: remail
 
     steps:
       - uses: actions/checkout@v4
@@ -20,18 +21,31 @@ jobs:
           flutter-version: '3.41.4'
 
       - name: Restore keystore
+        shell: bash
         run: |
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/remail-release.jks"
-          cat > android/key.properties <<KEYPROPS
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/remail-release.jks"
+          cat > android/key.properties <<EOF
           storePassword=${KEYSTORE_PASSWORD}
           keyPassword=${KEY_PASSWORD}
           keyAlias=${KEY_ALIAS}
           storeFile=$GITHUB_WORKSPACE/remail-release.jks
-          KEYPROPS
+          EOF
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+
+      - name: Check keystore file
+        run: |
+          ls -l "$GITHUB_WORKSPACE/remail-release.jks"
+          file "$GITHUB_WORKSPACE/remail-release.jks"
+
+      - name: Verify keystore
+        run: |
+          keytool -list -keystore "$GITHUB_WORKSPACE/remail-release.jks" -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD"
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
 
       - name: Flutter pub get
