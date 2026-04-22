@@ -50,6 +50,20 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
+            // Enable R8 for better reproducibility of resources and classes.dex
+            isMinifyEnabled = true
+            isShrinkResources = false // Resource shrinking is non-deterministic
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
+    }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+        jniLibs {
+            // Force stripping to be deterministic
+            keepDebugSymbols = false
         }
     }
 }
