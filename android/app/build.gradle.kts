@@ -50,7 +50,6 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
-            // Disable R8 for better predictability of resources and classes.dex in F-Droid
             isMinifyEnabled = false
             isShrinkResources = false
         }
@@ -59,6 +58,8 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            // Exclude non-deterministic baseline profiles
+            excludes += "assets/dexopt/baseline.prof*"
         }
     }
 }
