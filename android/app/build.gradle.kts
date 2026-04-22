@@ -50,10 +50,9 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("release")
-            // Enable R8 for better reproducibility of resources and classes.dex
-            isMinifyEnabled = true
+            // Disable R8 for better predictability of resources and classes.dex in F-Droid
+            isMinifyEnabled = false
             isShrinkResources = false
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
 
