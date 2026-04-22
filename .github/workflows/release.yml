@@ -7,6 +7,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     environment: remail
+    env:
+      BUILD_ROOT: /home/vagrant/build/ink.hifuu.rusend_next
 
     steps:
       - uses: actions/checkout@v4
@@ -14,21 +16,32 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.41.4'
 
+      - name: Prepare reproducible workspace
+        shell: bash
+        run: |
+          sudo mkdir -p "$(dirname "$BUILD_ROOT")"
+          sudo chown -R "$USER":"$USER" /home/vagrant
+          rsync -a --delete --exclude '.git' "$GITHUB_WORKSPACE"/ "$BUILD_ROOT"/
+
+      - name: Set build timestamp
+        shell: bash
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
+
       - name: Restore keystore
         shell: bash
         run: |
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$GITHUB_WORKSPACE/remail-release.jks"
-          cat > android/key.properties <<EOF
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$BUILD_ROOT/remail-release.jks"
+          cat > "$BUILD_ROOT/android/key.properties" <<EOF
           storePassword=${KEYSTORE_PASSWORD}
           keyPassword=${KEY_PASSWORD}
           keyAlias=${KEY_ALIAS}
-          storeFile=$GITHUB_WORKSPACE/remail-release.jks
+          storeFile=$BUILD_ROOT/remail-release.jks
           EOF
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -38,29 +51,42 @@ jobs:
 
       - name: Check keystore file
         run: |
-          ls -l "$GITHUB_WORKSPACE/remail-release.jks"
-          file "$GITHUB_WORKSPACE/remail-release.jks"
+          ls -l "$BUILD_ROOT/remail-release.jks"
+          file "$BUILD_ROOT/remail-release.jks"
 
       - name: Verify keystore
         run: |
-          keytool -list -keystore "$GITHUB_WORKSPACE/remail-release.jks" -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD"
+          keytool -list -keystore "$BUILD_ROOT/remail-release.jks" -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD"
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
 
       - name: Flutter pub get
-        run: flutter pub get
+        shell: bash
+        run: |
+          cd "$BUILD_ROOT"
+          export PUB_CACHE="$BUILD_ROOT/.pub-cache"
+          flutter pub get --enforce-lockfile
 
       - name: Build APKs
+        shell: bash
         run: |
-          export SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
+          cd "$BUILD_ROOT"
+          export PUB_CACHE="$BUILD_ROOT/.pub-cache"
+          export GRADLE_USER_HOME="$BUILD_ROOT/.gradle"
           flutter build apk --release --split-per-abi \
             --obfuscate --split-debug-info=build/app/outputs/symbols \
             --no-tree-shake-icons \
             --extra-gen-snapshot-options=--deterministic
 
+      - name: Collect artifacts
+        shell: bash
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/release-apks"
+          cp "$BUILD_ROOT"/build/app/outputs/flutter-apk/*.apk "$GITHUB_WORKSPACE/release-apks/"
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-apks
-          path: build/app/outputs/flutter-apk/*.apk
+          path: release-apks/*.apk
