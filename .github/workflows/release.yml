@@ -54,7 +54,8 @@ jobs:
       - name: Build APKs
         run: |
           export SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)
-          flutter build apk --release --split-per-abi
+          flutter build apk --release --split-per-abi \
+            --extra-gen-snapshot-options=--deterministic
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
